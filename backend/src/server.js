@@ -23,10 +23,10 @@ app.use("/api/files", fileRoutes);
 app.use("/api/libraries", libraryRoutes);
 
 // Simple root route (optional)
-app.get("/", (req, res) => {
-  res.send("Library App Backend is running!");
+app.use(express.static("public"));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 // Error handling middleware (optional, but good practice)
 app.use((err, req, res, next) => {
   console.error(err.stack);

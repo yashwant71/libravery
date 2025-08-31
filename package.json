@@ -1,10 +1,10 @@
 {
-    "name": "librarvery-monorepo",
+    "name": "librarvery",
     "version": "1.0.0",
     "scripts": {
-        "dev:backend": "cd backend && npm install && node --watch src/server.js",
-        "dev:frontend": "cd frontend && npm install && npm run dev",
-        "install:all": "cd backend && npm install && cd ../frontend && npm install"
+        "start": "cp -r frontend/dist/* backend/public/ && cd backend && node src/server.js",
+        "prebuild": "cd backend && npm run build",
+        "build": "cd frontend && npm run build"
     },
     "devDependencies": {
         "@types/node": "^24.3.0"
