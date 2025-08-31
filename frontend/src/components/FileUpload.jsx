@@ -55,7 +55,6 @@ function FileUpload({ libraryId, onFileUploaded }) {
       if (onFileUploaded) onFileUploaded();
     } catch (err) {
       console.error("Error uploading file:", err);
-      // Display the specific error message from the backend if available
       setError(err.response?.data?.message || "Error uploading file.");
     } finally {
       setUploading(false);
@@ -71,13 +70,14 @@ function FileUpload({ libraryId, onFileUploaded }) {
   return (
     <div className="bg-background-primary p-4 rounded-lg border border-border">
       {!selectedFile ? (
+        // --- ADDED z-0 and relative for better stacking context ---
+        // The label is the most important element for interaction here.
         <label
           htmlFor="file-upload"
-          className="relative cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary hover:bg-background-muted transition-colors"
+          className="relative z-0 cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary hover:bg-background-muted transition-colors"
         >
           <div className="text-center">
-            <FiUploadCloud className="w-10 h-10 mb-3 text-text-muted mx-auto" />{" "}
-            {/* Centered icon */}
+            <FiUploadCloud className="w-10 h-10 mb-3 text-text-muted mx-auto" />
             <p className="mb-2 text-sm text-text-muted">
               <span className="font-semibold text-text-base">
                 Click to Contribute
@@ -85,7 +85,6 @@ function FileUpload({ libraryId, onFileUploaded }) {
             </p>
             <p className="text-xs text-text-muted">PNG, JPG, or JPEG only</p>
           </div>
-          {/* Add the 'accept' attribute to filter the file dialog */}
           <input
             id="file-upload"
             type="file"
