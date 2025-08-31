@@ -4,7 +4,6 @@ import PropTypes from "prop-types"; // Still need to import PropTypes for other 
 import { FaFolder, FaTrash, FaLock } from "react-icons/fa";
 // --- Import our centralized shape definition ---
 import { libraryShape } from "../utils/propTypes";
-
 function LibraryCard({ library, isAdmin, onDelete }) {
   const handleDeleteClick = (e) => {
     e.preventDefault();
@@ -32,7 +31,7 @@ function LibraryCard({ library, isAdmin, onDelete }) {
                 />
               )}
             </div>
-            <p className="text-text-muted text-sm mt-1 truncate">
+            <p className="text-text-muted text-sm mt-1 line-clamp-1">
               {library.description || "No description"}
             </p>
           </div>
