@@ -33,5 +33,13 @@ app.use((err, req, res, next) => {
   res.status(500).send("Something broke!");
 });
 
-const PORT = process.env.PORT;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// If it's not defined, we know we're running locally.
+if (process.env.VITE_BACKEND_URL !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () =>
+    console.log(`Server is running locally on port ${PORT}`)
+  );
+}
+
+// Export the app object for Vercel's serverless environment
+module.exports = app;
