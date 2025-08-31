@@ -107,6 +107,7 @@ function FileList({ libraryName, refreshTrigger }) {
 
   useEffect(() => {
     fetchFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [libraryName, refreshTrigger]);
 
   if (loading) return <div className="text-center py-8">Loading files...</div>;
