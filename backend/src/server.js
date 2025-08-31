@@ -2,6 +2,7 @@
 require("dotenv").config({ path: ".env" }); // Adjust path if .env is not in root of backend
 
 const express = require("express");
+const path = require("path");
 const connectDB = require("./config/db");
 const fileRoutes = require("./routes/fileRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
