@@ -1,5 +1,5 @@
 // frontend/src/components/FileUpload.jsx
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 import { FiUploadCloud } from "react-icons/fi";
@@ -11,12 +11,21 @@ function FileUpload({ libraryId, onFileUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null); // Create a ref for the input
 
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
       setMessage("");
       setError("");
+    }
+  };
+
+  // A dedicated function to trigger the file input click
+  const triggerFileSelect = () => {
+    // We trigger the click on the actual hidden input element
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -70,13 +79,20 @@ function FileUpload({ libraryId, onFileUploaded }) {
   return (
     <div className="bg-background-primary p-4 rounded-lg border border-border">
       {!selectedFile ? (
-        // --- ADDED z-0 and relative for better stacking context ---
-        // The label is the most important element for interaction here.
-        <label
-          htmlFor="file-upload"
-          className="relative z-0 cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary hover:bg-background-muted transition-colors"
+        // We now use a div with explicit event handlers for max compatibility
+        <div
+          className="relative cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary hover:bg-background-muted transition-colors"
+          onClick={triggerFileSelect}
+          onTouchEnd={triggerFileSelect} // Explicitly handle touch events
+          style={{ WebkitTapHighlightColor: "transparent" }} // Prevents iOS tap highlight flash
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") triggerFileSelect();
+          }} // For accessibility
         >
-          <div className="text-center">
+          {/* pointer-events-none ensures clicks/taps pass through to the parent div */}
+          <div className="text-center pointer-events-none">
             <FiUploadCloud className="w-10 h-10 mb-3 text-text-muted mx-auto" />
             <p className="mb-2 text-sm text-text-muted">
               <span className="font-semibold text-text-base">
@@ -85,14 +101,16 @@ function FileUpload({ libraryId, onFileUploaded }) {
             </p>
             <p className="text-xs text-text-muted">PNG, JPG, or JPEG only</p>
           </div>
+          {/* The input is still hidden, but we now interact with it via its ref */}
           <input
+            ref={fileInputRef}
             id="file-upload"
             type="file"
             className="hidden"
             onChange={handleFileChange}
             accept="image/png, image/jpeg, image/jpg"
           />
-        </label>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center w-full h-32">
           <p className="text-text-base font-medium mb-4 text-center">
