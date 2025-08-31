@@ -1,0 +1,48 @@
+/* frontend/src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define our NEW "classy dark" design tokens as CSS variables */
+@layer base {
+  :root {
+    /* Text Colors */
+    --color-text-base: #e5e7eb; /* gray-200 */
+    --color-text-muted: #9ca3af; /* gray-400 */
+    --color-text-accent: #60a5fa; /* blue-400 */
+
+    /* Background Colors */
+    --color-bg-primary: #1f2937; /* gray-800 */
+    --color-bg-secondary: #111827; /* gray-900 */
+    --color-bg-muted: #374151; /* gray-700 */
+
+    /* Border Colors */ 
+    --color-border-base: #374151; /* gray-700 */
+    --color-border-accent: #4b5563; /* gray-600 */
+    
+    /* Brand & Accent Colors */
+    --color-primary: #3b82f6; /* blue-500 */
+    --color-primary-hover: #60a5fa; /* blue-400 */
+
+    --color-secondary: #10b981; /* green-500 */
+    --color-secondary-hover: #34d399; /* green-400 */
+
+    --color-danger: #ef4444; /* red-500 */
+    --color-danger-hover: #f87171; /* red-400 */
+  }
+}
+
+/* Apply the base dark theme to the entire app */
+body {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-base);
+}
+
+/* Custom styles for dark mode form inputs */
+input, textarea {
+    background-color: var(--color-bg-muted);
+    border-color: var(--color-border-accent);
+}
+input::placeholder, textarea::placeholder {
+    color: var(--color-text-muted);
+}
