@@ -261,7 +261,7 @@ function HomePage() {
     <>
       <div className="text-center p-5">
         <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-          Your Media Library Hub
+          Share, Collaborate, Organize
         </h1>
         <p className="text-lg text-text-muted mb-8 max-w-2xl mx-auto">
           Quickly access a library or discover collections below.
