@@ -1,5 +1,7 @@
 // backend/src/controllers/libraryController.js
 const Library = require("../models/Library");
+const File = require("../models/File");
+const cloudinary = require("../config/cloudinary");
 
 // Create a new library
 exports.createLibrary = async (req, res) => {
