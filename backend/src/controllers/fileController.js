@@ -7,7 +7,6 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
 exports.uploadFile = async (req, res) => {
   try {
-    // --- Destructure userName from the request body ---
     const { libraryId, userName } = req.body;
 
     if (!req.file) {
@@ -17,9 +16,11 @@ exports.uploadFile = async (req, res) => {
       return res.status(400).json({ message: "Library ID is required" });
     }
     if (!ALLOWED_MIME_TYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({
-        message: "Invalid file type. Only JPG, JPEG, and PNG are allowed.",
-      });
+      return res
+        .status(400)
+        .json({
+          message: "Invalid file type. Only JPG, JPEG, and PNG are allowed.",
+        });
     }
 
     const library = await Library.findById(libraryId);
@@ -36,15 +37,17 @@ exports.uploadFile = async (req, res) => {
       resource_type: "auto",
     });
 
+    // --- THE FIX IS HERE ---
+    // We now use `req.file.originalname` for the required 'filename' field.
+    // This is the actual name of the file from the user's computer.
     const newFile = new File({
-      filename: result.original_filename,
+      filename: req.file.originalname,
       originalName: req.file.originalname,
       mimetype: req.file.mimetype,
       size: result.bytes,
       url: result.secure_url,
       public_id: result.public_id,
       library: libraryId,
-      // --- Save the user's name with the file record ---
       uploadedBy: userName,
     });
 
@@ -53,7 +56,8 @@ exports.uploadFile = async (req, res) => {
       .status(201)
       .json({ message: "File uploaded successfully", file: newFile });
   } catch (error) {
-    console.error("Upload error:", error);
+    // Log the full error for better debugging on the server
+    console.error("Upload failed with error:", error);
     res
       .status(500)
       .json({ message: "Server error during upload", error: error.message });
