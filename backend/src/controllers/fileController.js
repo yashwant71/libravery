@@ -7,7 +7,7 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
 exports.uploadFile = async (req, res) => {
   try {
-    const { libraryId, userName } = req.body;
+    const { libraryId, userId } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -16,11 +16,9 @@ exports.uploadFile = async (req, res) => {
       return res.status(400).json({ message: "Library ID is required" });
     }
     if (!ALLOWED_MIME_TYPES.includes(req.file.mimetype)) {
-      return res
-        .status(400)
-        .json({
-          message: "Invalid file type. Only JPG, JPEG, and PNG are allowed.",
-        });
+      return res.status(400).json({
+        message: "Invalid file type. Only JPG, JPEG, and PNG are allowed.",
+      });
     }
 
     const library = await Library.findById(libraryId);
@@ -48,7 +46,7 @@ exports.uploadFile = async (req, res) => {
       url: result.secure_url,
       public_id: result.public_id,
       library: libraryId,
-      uploadedBy: userName,
+      uploadedBy: userId,
     });
 
     await newFile.save();
@@ -82,9 +80,11 @@ exports.getFilesByLibrary = async (req, res) => {
     }
 
     // Find files associated with that library's ID
-    const files = await File.find({ library: foundLibrary._id }).sort({
-      uploadedAt: -1,
-    });
+    const files = await File.find({ library: foundLibrary._id })
+      .populate("uploadedBy", "name") // <-- THE MAGIC IS HERE
+      .sort({
+        uploadedAt: -1,
+      });
     res.json(files);
   } catch (error) {
     console.error("Error fetching files by library:", error);

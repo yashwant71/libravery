@@ -224,7 +224,7 @@ function LibraryPage() {
       <FileUpload
         libraryId={library._id}
         onFileUploaded={handleFileUploadSuccess}
-        userName={userInfo ? userInfo.name : null}
+        user={userInfo}
       />
       <h3 className="text-2xl font-semibold mt-10 mb-4">
         Files in this Library

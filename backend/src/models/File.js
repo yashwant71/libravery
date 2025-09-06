@@ -13,7 +13,12 @@ const fileSchema = new mongoose.Schema({
     ref: "Library", // Reference to the Library model
     required: true,
   },
-  uploadedBy: { type: String, default: "Anonymous" },
+  // --- MODIFIED: Store the User's ObjectId instead of their name ---
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // This creates a reference to the User model
+    required: true,
+  },
   uploadedAt: { type: Date, default: Date.now },
 });
 

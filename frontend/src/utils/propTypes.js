@@ -13,7 +13,11 @@ export const fileShape = PropTypes.shape({
   size: PropTypes.number,
   url: PropTypes.string.isRequired,
   public_id: PropTypes.string.isRequired,
-  uploadedBy: PropTypes.string,
+  // --- MODIFIED: uploadedBy is now an object with a name property ---
+  uploadedBy: PropTypes.shape({
+    _id: PropTypes.string, // The ID will be populated too
+    name: PropTypes.string,
+  }),
 });
 
 /**

@@ -146,13 +146,13 @@ function FileList({ libraryName, refreshTrigger }) {
               </div>
             )}
             <div className="p-2 w-full">
-              <p className="text-sm font-semibold text-text-base truncate">
+              {/* <p className="text-sm font-semibold text-text-base truncate">
                 {file.originalName}
-              </p>
-              {file.uploadedBy && (
+              </p> */}
+              {file.uploadedBy && file.uploadedBy.name && (
                 <div className="flex items-center justify-center gap-1 mt-1 text-xs text-text-muted">
                   <FaUserCircle />
-                  <span>{file.uploadedBy}</span>
+                  <span>{file.uploadedBy.name}</span>
                 </div>
               )}
             </div>
