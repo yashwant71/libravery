@@ -13,6 +13,7 @@ export const fileShape = PropTypes.shape({
   size: PropTypes.number,
   url: PropTypes.string.isRequired,
   public_id: PropTypes.string.isRequired,
+  uploadedBy: PropTypes.string,
 });
 
 /**

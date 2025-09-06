@@ -13,6 +13,7 @@ const fileSchema = new mongoose.Schema({
     ref: "Library", // Reference to the Library model
     required: true,
   },
+  uploadedBy: { type: String, default: "Anonymous" },
   uploadedAt: { type: Date, default: Date.now },
 });
 

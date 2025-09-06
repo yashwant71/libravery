@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import PropTypes from "prop-types"; // <-- Import PropTypes
 import axios from "axios";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaUserCircle } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 // --- Import our new admin constants ---
 import { ADMIN_USER_PARAM, ADMIN_USER_VALUE } from "../constants/admin";
@@ -151,6 +151,12 @@ function FileList({ libraryName, refreshTrigger }) {
               <p className="text-sm font-semibold text-text-base truncate">
                 {file.originalName}
               </p>
+              {file.uploadedBy && (
+                <div className="flex items-center justify-center gap-1 mt-1 text-xs text-text-muted">
+                  <FaUserCircle />
+                  <span>{file.uploadedBy}</span>
+                </div>
+              )}
             </div>
 
             {isAdmin && (

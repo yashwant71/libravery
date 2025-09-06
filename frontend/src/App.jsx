@@ -24,7 +24,13 @@ import {
   FaLock,
   FaChevronRight,
 } from "react-icons/fa";
-import { ADMIN_USER_PARAM, ADMIN_USER_VALUE } from "./constants/admin";
+import {
+  ADMIN_USER_PARAM,
+  ADMIN_USER_VALUE,
+  USER_LOCAL_STORAGE_KEY,
+  USER_PARAM,
+} from "./constants/admin";
+import UserInputModal from "./components/UserInputModal"; // <-- Import new modal
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -32,10 +38,27 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 // This single component contains the persistent navbar and fetches data for child pages.
 function Layout() {
   const { libraryName } = useParams(); // Get libraryName if on a library page
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentLibrary, setCurrentLibrary] = useState(null);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // --- NEW: State for managing user name and modal ---
+  const [userName, setUserName] = useState(null);
+  const [isUserModalOpen, setUserModalOpen] = useState(false);
+
+  // Effect to check for user in localStorage on initial load
+  useEffect(() => {
+    const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
+    if (storedUser) {
+      setUserName(storedUser);
+    } else if (libraryName) {
+      // Only ask for name if on a library page
+      setUserModalOpen(true);
+    }
+  }, [libraryName]); // Dependency on libraryName ensures it only runs on relevant pages
 
   // Fetch library data here, in the parent layout
   const fetchLibraryData = useCallback(async () => {
@@ -58,6 +81,18 @@ function Layout() {
       setLoadingLibrary(false);
     }
   }, [libraryName]);
+
+  // Handler for when the user submits their name from the modal
+  const handleUserSubmit = (name) => {
+    localStorage.setItem(USER_LOCAL_STORAGE_KEY, name);
+    setUserName(name);
+    setUserModalOpen(false);
+
+    // Add the user to the URL query params, preserving existing ones (like admin)
+    const queryParams = new URLSearchParams(location.search);
+    queryParams.set(USER_PARAM, name);
+    navigate({ search: queryParams.toString() }, { replace: true });
+  };
 
   useEffect(() => {
     fetchLibraryData();
@@ -137,10 +172,18 @@ function Layout() {
               error,
               refreshKey,
               handleFileUploadSuccess,
+              userName,
             }}
           />
         </div>
       </main>
+      {/* Conditionally render the new user input modal */}
+      {isUserModalOpen && (
+        <UserInputModal
+          onSubmit={handleUserSubmit}
+          onClose={() => setUserModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -149,8 +192,14 @@ function Layout() {
 // It no longer fetches data. It receives it from the Layout via context.
 function LibraryPage() {
   // Get all data and functions from the parent Layout component
-  const { library, loading, error, refreshKey, handleFileUploadSuccess } =
-    useOutletContext();
+  const {
+    library,
+    loading,
+    error,
+    refreshKey,
+    handleFileUploadSuccess,
+    userName,
+  } = useOutletContext();
 
   if (loading)
     return (
@@ -173,6 +222,7 @@ function LibraryPage() {
       <FileUpload
         libraryId={library._id}
         onFileUploaded={handleFileUploadSuccess}
+        userName={userName}
       />
       <h3 className="text-2xl font-semibold mt-10 mb-4">
         Files in this Library

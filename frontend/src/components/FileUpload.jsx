@@ -1,41 +1,53 @@
 // frontend/src/components/FileUpload.jsx
-import { useState, useRef } from "react";
+import { useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
+import { useDropzone } from "react-dropzone";
 import { FiUploadCloud } from "react-icons/fi";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-function FileUpload({ libraryId, onFileUploaded }) {
-  const [selectedFile, setSelectedFile] = useState(null);
+function FileUpload({ libraryId, onFileUploaded, userName }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const fileInputRef = useRef(null); // Create a ref for the input
 
-  const handleFileChange = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-      setMessage("");
-      setError("");
-    }
-  };
+  // --- 2. Create a callback for when a file is dropped/selected ---
+  const onDrop = useCallback(
+    (acceptedFiles, fileRejections) => {
+      // Handle rejected files (e.g., wrong type)
+      if (fileRejections.length > 0) {
+        setError("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
+        return;
+      }
 
-  // A dedicated function to trigger the file input click
-  const triggerFileSelect = () => {
-    // We trigger the click on the actual hidden input element
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+      setError(""); // Clear previous errors
+      const file = acceptedFiles[0];
+      if (file) {
+        handleUpload(file);
+      }
+    },
+    [libraryId, userName]
+  ); // Dependencies for the callback
 
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      setError("Please select a file.");
-      return;
-    }
+  // --- 3. Set up the dropzone hook ---
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/jpeg": [".jpeg", ".jpg"],
+      "image/png": [".png"],
+    },
+    multiple: false, // Only allow one file at a time
+  });
+
+  // --- 4. The handleUpload function now accepts a file directly ---
+  const handleUpload = async (file) => {
     if (!libraryId) {
       setError("Library ID is missing. Cannot upload.");
+      return;
+    }
+    if (!userName) {
+      setError("Cannot upload without a user name. Please refresh.");
       return;
     }
 
@@ -44,14 +56,13 @@ function FileUpload({ libraryId, onFileUploaded }) {
     setError("");
 
     const formData = new FormData();
-    formData.append("file", selectedFile);
+    formData.append("file", file);
     formData.append("libraryId", libraryId);
+    formData.append("userName", userName);
 
     try {
       await axios.post(`${BACKEND_URL}/files/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
@@ -60,91 +71,70 @@ function FileUpload({ libraryId, onFileUploaded }) {
         },
       });
       setMessage("File uploaded successfully!");
-      setSelectedFile(null);
+      // The library will automatically reset, no need for a selectedFile state
       if (onFileUploaded) onFileUploaded();
     } catch (err) {
       console.error("Error uploading file:", err);
+      setMessage(""); // Clear progress message on error
       setError(err.response?.data?.message || "Error uploading file.");
     } finally {
       setUploading(false);
+      // Auto-clear messages after a few seconds
+      setTimeout(() => {
+        setMessage("");
+        setError("");
+      }, 4000);
     }
-  };
-
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setMessage("");
-    setError("");
   };
 
   return (
     <div className="bg-background-primary p-4 rounded-lg border border-border">
-      {!selectedFile ? (
-        // We now use a div with explicit event handlers for max compatibility
-        <div
-          className="relative cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary hover:bg-background-muted transition-colors"
-          onClick={triggerFileSelect}
-          onTouchEnd={triggerFileSelect} // Explicitly handle touch events
-          style={{ WebkitTapHighlightColor: "transparent" }} // Prevents iOS tap highlight flash
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") triggerFileSelect();
-          }} // For accessibility
-        >
-          {/* pointer-events-none ensures clicks/taps pass through to the parent div */}
-          <div className="text-center pointer-events-none">
-            <FiUploadCloud className="w-10 h-10 mb-3 text-text-muted mx-auto" />
-            <p className="mb-2 text-sm text-text-muted">
-              <span className="font-semibold text-text-base">
-                Click to Contribute
-              </span>
-            </p>
-            <p className="text-xs text-text-muted">PNG, JPG, or JPEG only</p>
-          </div>
-          {/* The input is still hidden, but we now interact with it via its ref */}
-          <input
-            ref={fileInputRef}
-            id="file-upload"
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-            accept="image/png, image/jpeg, image/jpg"
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center w-full h-32">
-          <p className="text-text-base font-medium mb-4 text-center">
-            Selected:{" "}
-            <span className="text-primary block sm:inline">
-              {selectedFile.name}
-            </span>
-          </p>
-          <div className="flex space-x-2">
-            <button
-              onClick={handleUpload}
-              disabled={uploading}
-              className="bg-secondary hover:bg-secondary-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 transition-colors"
-            >
-              {uploading ? "Uploading..." : "Confirm & Upload"}
-            </button>
-            <button
-              onClick={clearSelection}
-              disabled={uploading}
-              className="bg-background-muted hover:bg-border text-text-base font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      {/* --- 5. Apply the props from the hook to a div --- */}
+      <div
+        {...getRootProps()}
+        // Dynamically change style based on dropzone state
+        className={`relative cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary transition-colors ${
+          isDragActive
+            ? "border-primary bg-background-muted"
+            : "hover:bg-background-muted"
+        }`}
+      >
+        {/* --- 6. The input is handled by the hook --- */}
+        <input {...getInputProps()} />
 
-      {message && !error && (
+        <div className="text-center pointer-events-none">
+          <FiUploadCloud
+            className={`w-10 h-10 mb-3 mx-auto transition-colors ${
+              isDragActive ? "text-primary" : "text-text-muted"
+            }`}
+          />
+          {uploading ? (
+            <p className="text-text-base">{message}</p>
+          ) : isDragActive ? (
+            <p className="font-semibold text-primary">Drop the file here...</p>
+          ) : (
+            <>
+              <p className="mb-2 text-sm text-text-muted">
+                <span className="font-semibold text-text-base">
+                  Click to Contribute
+                </span>{" "}
+                or drag & drop
+              </p>
+              <p className="text-xs text-text-muted">PNG, JPG, or JPEG only</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Error message display */}
+      {error && (
+        <p className="text-danger mt-3 text-sm text-center w-full">{error}</p>
+      )}
+      {/* Show success message here as well */}
+      {!uploading && message && (
         <p className="text-secondary mt-3 text-sm text-center w-full">
           {message}
         </p>
-      )}
-      {error && (
-        <p className="text-danger mt-3 text-sm text-center w-full">{error}</p>
       )}
     </div>
   );
@@ -153,6 +143,7 @@ function FileUpload({ libraryId, onFileUploaded }) {
 FileUpload.propTypes = {
   libraryId: PropTypes.string.isRequired,
   onFileUploaded: PropTypes.func.isRequired,
+  userName: PropTypes.string,
 };
 
 export default FileUpload;
