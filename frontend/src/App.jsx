@@ -6,7 +6,6 @@ import {
   useParams,
   useNavigate,
   Link,
-  useLocation,
   Outlet, // For nested routing
   useOutletContext, // To receive context from parent layout
 } from "react-router-dom";
@@ -17,6 +16,8 @@ import FileList from "./components/FileList";
 import CreateLibrary from "./components/CreateLibrary";
 import LibraryCard from "./components/LibraryCard";
 import Modal from "./components/common/Modal";
+import AuthModal from "./components/AuthModal";
+import UserMenu from "./components/UserMenu";
 // --- react-icons will be used directly in the Layout ---
 import {
   FaHome,
@@ -24,13 +25,7 @@ import {
   FaLock,
   FaChevronRight,
 } from "react-icons/fa";
-import {
-  ADMIN_USER_PARAM,
-  ADMIN_USER_VALUE,
-  USER_LOCAL_STORAGE_KEY,
-  USER_PARAM,
-} from "./constants/admin";
-import UserInputModal from "./components/UserInputModal"; // <-- Import new modal
+import { USER_LOCAL_STORAGE_KEY } from "./constants/admin";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -38,27 +33,33 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 // This single component contains the persistent navbar and fetches data for child pages.
 function Layout() {
   const { libraryName } = useParams(); // Get libraryName if on a library page
-  const navigate = useNavigate();
-  const location = useLocation();
   const [currentLibrary, setCurrentLibrary] = useState(null);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // --- NEW: State for managing user name and modal ---
-  const [userName, setUserName] = useState(null);
-  const [isUserModalOpen, setUserModalOpen] = useState(false);
-
-  // Effect to check for user in localStorage on initial load
+  // --- NEW: User state now holds the full user object { _id, name } ---
+  const [userInfo, setUserInfo] = useState(null);
+  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  // Effect to load user from localStorage on initial app load.
+  // This now controls the authLoading state.
   useEffect(() => {
     const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
     if (storedUser) {
-      setUserName(storedUser);
-    } else if (libraryName) {
-      // Only ask for name if on a library page
-      setUserModalOpen(true);
+      setUserInfo(JSON.parse(storedUser));
     }
-  }, [libraryName]); // Dependency on libraryName ensures it only runs on relevant pages
+    setAuthLoading(false);
+  }, []);
+
+  // Effect to check if authentication is needed when navigating.
+  // This now depends on authLoading to prevent the race condition.
+  useEffect(() => {
+    if (authLoading) return;
+    if (libraryName && !userInfo) {
+      setAuthModalOpen(true);
+    }
+  }, [libraryName, userInfo, authLoading]);
 
   // Fetch library data here, in the parent layout
   const fetchLibraryData = useCallback(async () => {
@@ -82,18 +83,13 @@ function Layout() {
     }
   }, [libraryName]);
 
-  // Handler for when the user submits their name from the modal
-  const handleUserSubmit = (name) => {
-    localStorage.setItem(USER_LOCAL_STORAGE_KEY, name);
-    setUserName(name);
-    setUserModalOpen(false);
-
-    // Add the user to the URL query params, preserving existing ones (like admin)
-    const queryParams = new URLSearchParams(location.search);
-    queryParams.set(USER_PARAM, name);
-    navigate({ search: queryParams.toString() }, { replace: true });
+  // Handler for when the user successfully signs up or logs in
+  const handleAuthSuccess = (userData) => {
+    // Store the user object in localStorage
+    localStorage.setItem(USER_LOCAL_STORAGE_KEY, JSON.stringify(userData));
+    setUserInfo(userData);
+    setAuthModalOpen(false);
   };
-
   useEffect(() => {
     fetchLibraryData();
   }, [fetchLibraryData]);
@@ -104,60 +100,66 @@ function Layout() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* --- The SINGLE Persistent Navbar --- */}
-      <nav className="bg-background-primary shadow-sm p-4 border-b border-border sticky top-0 z-20">
-        <div className="flex items-center text-sm">
-          {/* --- Dynamic Content Logic --- */}
-          {/* If we have a library name in the URL, show the breadcrumbs */}
-          {libraryName ? (
-            <ol className="inline-flex items-center text-text-muted">
-              <li className="inline-flex items-center">
-                <Link
-                  to="/"
-                  className="inline-flex items-center font-medium text-text-base hover:text-primary"
-                >
-                  <FaHome className="w-4 h-4" />
-                  <span className="ml-2">Home</span>
-                </Link>
-              </li>
-              <li>
-                <div className="flex items-center">
-                  <FaChevronRight className="w-3 h-3 text-border-accent mx-1 md:mx-3" />
-                  {/* Show a loading skeleton or the library name */}
-                  {loadingLibrary ? (
-                    <div className="h-5 bg-background-muted rounded animate-pulse w-32"></div>
-                  ) : currentLibrary ? (
-                    <span className="font-medium text-text-base inline-flex items-center gap-2">
-                      {currentLibrary.name}
-                      {currentLibrary.isPublic ? (
-                        <FaGlobeAmericas
-                          className="w-4 h-4 text-secondary"
-                          title="Public Library"
-                        />
-                      ) : (
-                        <FaLock
-                          className="w-4 h-4 text-text-muted"
-                          title="Private Library"
-                        />
-                      )}
-                    </span>
-                  ) : (
-                    <span className="font-medium text-danger">
-                      Library not found
-                    </span>
-                  )}
-                </div>
-              </li>
-            </ol>
-          ) : (
-            // Otherwise, just show the brand name on the homepage
-            <Link
-              to="/"
-              className="text-xl font-bold text-text-base hover:text-primary transition-colors"
-            >
-              Libra<span className="text-primary">very</span>
-            </Link>
-          )}
+      <nav className="bg-background-primary p-4 border-b border-border sticky top-0 z-20">
+        <div className="flex items-center justify-between text-sm">
+          {/* Left side (Breadcrumbs or Brand) */}
+          <div className="flex-1 min-w-0">
+            {" "}
+            {/* Flex properties to handle long library names */}
+            {libraryName ? (
+              <ol className="inline-flex items-center text-text-muted">
+                <li className="inline-flex items-center">
+                  <Link
+                    to="/"
+                    className="inline-flex items-center font-medium text-text-base hover:text-primary"
+                  >
+                    <FaHome className="w-4 h-4" />{" "}
+                    <span className="ml-2">Home</span>
+                  </Link>
+                </li>
+                <li>
+                  <div className="flex items-center">
+                    <FaChevronRight className="w-3 h-3 text-border-accent mx-1 md:mx-3" />
+                    {loadingLibrary ? (
+                      <div className="h-5 bg-background-muted rounded animate-pulse w-32"></div>
+                    ) : currentLibrary ? (
+                      <span className="font-medium text-text-base inline-flex items-center gap-2 truncate">
+                        {currentLibrary.name}
+                        {currentLibrary.isPublic ? (
+                          <FaGlobeAmericas
+                            className="w-4 h-4 text-secondary"
+                            title="Public Library"
+                          />
+                        ) : (
+                          <FaLock
+                            className="w-4 h-4 text-text-muted"
+                            title="Private Library"
+                          />
+                        )}
+                      </span>
+                    ) : (
+                      <span className="font-medium text-danger">
+                        Library not found
+                      </span>
+                    )}
+                  </div>
+                </li>
+              </ol>
+            ) : (
+              <Link
+                to="/"
+                className="text-xl font-bold text-text-base hover:text-primary transition-colors"
+              >
+                Libra<span className="text-primary">very</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Right side (UserMenu - rendered conditionally) */}
+          <div className="flex-shrink-0">
+            {/* Only render the UserMenu if we are on a library page AND a user is logged in */}
+            {libraryName && userInfo && <UserMenu user={userInfo} />}
+          </div>
         </div>
       </nav>
 
@@ -172,16 +174,16 @@ function Layout() {
               error,
               refreshKey,
               handleFileUploadSuccess,
-              userName,
+              userInfo,
             }}
           />
         </div>
       </main>
       {/* Conditionally render the new user input modal */}
-      {isUserModalOpen && (
-        <UserInputModal
-          onSubmit={handleUserSubmit}
-          onClose={() => setUserModalOpen(false)}
+      {isAuthModalOpen && (
+        <AuthModal
+          onAuthSuccess={handleAuthSuccess}
+          onClose={() => setAuthModalOpen(false)}
         />
       )}
     </div>
@@ -198,7 +200,7 @@ function LibraryPage() {
     error,
     refreshKey,
     handleFileUploadSuccess,
-    userName,
+    userInfo,
   } = useOutletContext();
 
   if (loading)
@@ -222,7 +224,7 @@ function LibraryPage() {
       <FileUpload
         libraryId={library._id}
         onFileUploaded={handleFileUploadSuccess}
-        userName={userName}
+        userName={userInfo ? userInfo.name : null}
       />
       <h3 className="text-2xl font-semibold mt-10 mb-4">
         Files in this Library
@@ -238,19 +240,19 @@ function HomePage() {
   const [error, setError] = useState(null);
   const [libraryInput, setLibraryInput] = useState("");
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // --- NEW: Get userInfo from localStorage ---
+  // We check this directly to determine admin status.
+  const [userInfo, setUserInfo] = useState(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Effect to check for admin status from URL
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    if (queryParams.get(ADMIN_USER_PARAM) === ADMIN_USER_VALUE) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
+    const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
+    if (storedUser) {
+      setUserInfo(JSON.parse(storedUser));
     }
-  }, [location.search]);
+  }, []); // Run once on component mount
+  // --- isAdmin is now a derived boolean, not state ---
+  const isAdmin = userInfo?.isAdmin === true;
 
   const fetchLibraries = useCallback(async () => {
     setLoading(true);
@@ -277,11 +279,7 @@ function HomePage() {
   const handleGoToLibrary = (e) => {
     e.preventDefault();
     if (libraryInput.trim()) {
-      // If admin, preserve the admin query parameter when navigating
-      const searchParams = isAdmin
-        ? `?${ADMIN_USER_PARAM}=${ADMIN_USER_VALUE}`
-        : "";
-      navigate(`/library/${libraryInput.trim().toLowerCase()}${searchParams}`);
+      navigate(`/library/${libraryInput.trim().toLowerCase()}`);
     }
   };
 

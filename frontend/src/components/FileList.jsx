@@ -1,12 +1,11 @@
 // frontend/src/components/FileList.jsx
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import PropTypes from "prop-types"; // <-- Import PropTypes
 import axios from "axios";
 import { FaTrash, FaUserCircle } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 // --- Import our new admin constants ---
-import { ADMIN_USER_PARAM, ADMIN_USER_VALUE } from "../constants/admin";
+import { USER_LOCAL_STORAGE_KEY } from "../constants/admin";
 // --- Import our centralized file shape definition ---
 import { fileShape } from "../utils/propTypes";
 
@@ -56,17 +55,16 @@ function FileList({ libraryName, refreshTrigger }) {
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const location = useLocation();
 
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    // --- UPDATED: Use the imported constants for checking admin status ---
-    if (queryParams.get(ADMIN_USER_PARAM) === ADMIN_USER_VALUE) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
+    const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      if (userData.isAdmin) {
+        setIsAdmin(true);
+      }
     }
-  }, [location.search]);
+  }, []); // Run once on component mount
 
   const fetchFiles = async () => {
     if (!libraryName) return;

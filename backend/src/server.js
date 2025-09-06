@@ -6,6 +6,8 @@ const path = require("path");
 const connectDB = require("./config/db");
 const fileRoutes = require("./routes/fileRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
+const userRoutes = require("./routes/userRoutes"); // <-- Import user routes
+
 const cors = require("cors");
 
 const app = express();
@@ -18,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/files", fileRoutes);
 app.use("/api/libraries", libraryRoutes);
+app.use("/api/users", userRoutes); // <-- Wire up the user routes
 
 app.use(express.static("public"));
 app.get("*", (req, res) => {
