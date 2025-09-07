@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { FaUserCircle, FaEye } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaComment } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { fileShape } from "../utils/propTypes";
 import FileActions from "./FileActions";
@@ -151,22 +151,43 @@ function FileList({ libraryName, refreshTrigger, filter }) {
             key={file._id}
             className="relative bg-background-primary rounded-lg border border-border flex flex-col group overflow-hidden"
           >
-            <div className="absolute top-2 left-2 z-10 bg-black bg-opacity-50 text-white text-xs font-bold flex items-center gap-1.5 py-1 px-2 rounded-full">
-              <FaEye />
-              <span>{file.views?.length || 0}</span>
-            </div>
-            {file.mimetype.startsWith("image/") ? (
-              <img
-                src={file.url}
-                alt={file.originalName}
-                className="h-40 w-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
-                onClick={() => handleTrackView(file)}
-              />
-            ) : (
-              <div className="h-40 w-full flex items-center justify-center bg-background-muted">
-                <span className="text-6xl text-text-muted">📄</span>
+            <div
+              className="relative h-40 w-full cursor-pointer overflow-hidden"
+              onClick={() => handleTrackView(file)}
+            >
+              {/* --- Top-Left View Count --- */}
+              <div className="absolute top-2 left-2 z-10 bg-black bg-opacity-50 text-white text-xs font-bold flex items-center gap-1.5 py-1 px-2 rounded-full pointer-events-none">
+                <FaEye />
+                <span>{file.views?.length || 0}</span>
               </div>
-            )}
+
+              {/* --- Top-Right Comment Count --- */}
+              <div className="absolute top-2 right-2 z-10 bg-black bg-opacity-50 text-white text-xs font-bold flex items-center gap-1.5 py-1 px-2 rounded-full pointer-events-none">
+                <FaComment />
+                <span>{file.comments?.length || 0}</span>
+              </div>
+
+              {file.mimetype.startsWith("image/") ? (
+                <img
+                  src={file.url}
+                  alt={file.originalName}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center bg-background-muted">
+                  <span className="text-6xl text-text-muted">📄</span>
+                </div>
+              )}
+
+              {/* --- Bottom Description Overlay (now correctly positioned) --- */}
+              {file.description && (
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                  <p className="text-white text-xs truncate">
+                    {file.description}
+                  </p>
+                </div>
+              )}
+            </div>
             <FileActions
               file={file}
               user={userInfo}

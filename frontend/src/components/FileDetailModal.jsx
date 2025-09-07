@@ -137,7 +137,6 @@ function FileDetailModal({
           </div>
 
           <div className="p-4">
-            <h3 className="font-bold mb-2">{file.originalName}</h3>
             {file.description && (
               <p className="text-sm text-text-muted mb-4">{file.description}</p>
             )}

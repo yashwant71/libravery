@@ -17,7 +17,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 function Layout() {
   const { libraryName } = useParams();
   const [currentLibrary, setCurrentLibrary] = useState(null);
-  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [loadingLibrary, setLoadingLibrary] = useState(!!libraryName);
   const [userInfo, setUserInfo] = useState(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -41,9 +41,12 @@ function Layout() {
   const fetchLibraryData = useCallback(async () => {
     if (!libraryName) {
       setCurrentLibrary(null);
+      setLoadingLibrary(false); // Ensure loading is false if there's nothing to fetch
+
       return;
     }
     setLoadingLibrary(true);
+
     try {
       const response = await axios.get(
         `${BACKEND_URL}/libraries/by-name/${libraryName}`
