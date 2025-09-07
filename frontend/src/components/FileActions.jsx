@@ -43,7 +43,7 @@ function FileActions({ file, user, onUpdate, onAuthRequired }) {
   };
 
   return (
-    <div className="flex w-full border-t border-b border-border mt-2">
+    <div className="flex w-full border-t border-b border-border ">
       {/* --- Like Button Block --- */}
       <motion.button
         onClick={() => handleAction("like")}
