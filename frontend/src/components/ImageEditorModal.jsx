@@ -5,6 +5,7 @@ import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { FaTimes, FaCheck, FaCropAlt, FaTrashRestore } from "react-icons/fa";
 
+// This helper function is unchanged from your version
 function getCroppedImage(image, crop) {
   const canvas = document.createElement("canvas");
   const scaleX = image.naturalWidth / image.width;
@@ -33,6 +34,7 @@ function getCroppedImage(image, crop) {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
+// The toolbar is unchanged from your version
 function EditorToolbar({
   mode,
   onFinalSave,
@@ -98,6 +100,7 @@ function ImageEditorModal({ file, onSave, onClose }) {
   const [editorMode, setEditorMode] = useState("main");
   const [crop, setCrop] = useState();
   const [completedCrop, setCompletedCrop] = useState(null);
+  const [description, setDescription] = useState(""); // <-- NEW: State for description
   const imgRef = useRef(null);
 
   useEffect(() => {
@@ -112,12 +115,15 @@ function ImageEditorModal({ file, onSave, onClose }) {
 
   const handleFinalSave = () => {
     if (!imgRef.current) return;
+
+    let finalDataUrl = imgSrc; // Default to the original/current image source
+
     if (completedCrop && completedCrop.width > 0) {
-      const croppedDataUrl = getCroppedImage(imgRef.current, completedCrop);
-      onSave(croppedDataUrl);
-    } else {
-      onSave(imgSrc);
+      finalDataUrl = getCroppedImage(imgRef.current, completedCrop);
     }
+
+    // --- MODIFIED: Pass the description along with the image data ---
+    onSave(finalDataUrl, description);
   };
 
   const enterCropMode = () => {
@@ -127,7 +133,7 @@ function ImageEditorModal({ file, onSave, onClose }) {
         centerCrop(
           makeAspectCrop(
             { unit: "%", width: 90 },
-            1,
+            undefined, // Freeform aspect ratio
             imgRef.current.width,
             imgRef.current.height
           ),
@@ -140,6 +146,12 @@ function ImageEditorModal({ file, onSave, onClose }) {
   };
 
   const handleConfirmCrop = () => {
+    if (crop && crop.width > 0) {
+      const croppedDataUrl = getCroppedImage(imgRef.current, crop);
+      setImgSrc(croppedDataUrl); // Apply the crop to the main image source
+      setCompletedCrop(null); // Reset completed crop as it's now part of the base image
+      setCrop(undefined); // Hide the crop UI
+    }
     setEditorMode("main");
   };
 
@@ -150,23 +162,23 @@ function ImageEditorModal({ file, onSave, onClose }) {
 
   const resetCrop = () => {
     setCompletedCrop(null);
+    // You might want to reload the original image source if you reset
+    // This part is optional, depending on desired UX
+    if (file) {
+      const reader = new FileReader();
+      reader.addEventListener("load", () =>
+        setImgSrc(reader.result?.toString() || "")
+      );
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 z-40 flex flex-col justify-center items-center">
-      {/* --- STYLE BLOCK FOR MOBILE FIX --- */}
       <style>
         {`
-          .ReactCrop__image {
-            touch-action: none;
-          }
-          .ReactCrop__drag-handle {
-            // Optional: Make handles bigger for easier grabbing on mobile
-            width: 20px;
-            height: 20px;
-            margin-top: -10px;
-            margin-left: -10px;
-          }
+          .ReactCrop__image { touch-action: none; }
+          .ReactCrop__drag-handle { width: 20px; height: 20px; margin-top: -10px; margin-left: -10px; }
         `}
       </style>
 
@@ -191,12 +203,25 @@ function ImageEditorModal({ file, onSave, onClose }) {
             <img
               ref={imgRef}
               src={imgSrc}
-              className="max-h-[80vh] max-w-[95vw] object-contain ReactCrop__image" // Added class here
+              className="max-h-[80vh] max-w-[95vw] object-contain"
               alt="Image to Crop"
             />
           </ReactCrop>
         )}
       </div>
+
+      {/* --- NEW: Description input appears in main mode --- */}
+      {editorMode === "main" && (
+        <div className="absolute bottom-4 w-full max-w-xl px-4 z-10">
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add a description..."
+            className="w-full bg-black bg-opacity-50 border border-gray-600 text-white rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
 
       {editorMode === "main" && completedCrop && (
         <div className="absolute bottom-4 left-4 z-10">

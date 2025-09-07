@@ -7,6 +7,8 @@ import { FaTrash, FaUserCircle, FaEye } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { fileShape } from "../utils/propTypes";
 import FileActions from "./FileActions";
+import FileDetailModal from "./FileDetailModal";
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // This sub-component does not need changes, but it's good practice to define its props.
@@ -52,19 +54,24 @@ function FileList({ libraryName, refreshTrigger, filter }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const { userInfo, onAuthRequired } = useOutletContext();
 
   useEffect(() => {
     // Admin check can now be based on the user object
     setIsAdmin(userInfo?.isAdmin === true);
   }, [userInfo]);
+
   const handleFileUpdate = (updatedFile) => {
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
         file._id === updatedFile._id ? updatedFile : file
       )
     );
+    // Also update the selectedFile if it's the one being changed
+    if (selectedFile?._id === updatedFile._id) {
+      setSelectedFile(updatedFile);
+    }
   };
   const fetchFiles = async () => {
     if (!libraryName) return;
@@ -109,26 +116,18 @@ function FileList({ libraryName, refreshTrigger, filter }) {
   }, [libraryName, refreshTrigger, filter]); // Re-fetch when the filter changes
 
   const handleTrackView = async (file) => {
-    // Only track view if a user is logged in
-    if (!userInfo || !userInfo._id) {
-      onAuthRequired();
-      return;
-    }
+    // Open the detail modal immediately
+    setSelectedFile(file);
 
-    // Open the image modal immediately for a good UX
-    setSelectedImage(file.url);
+    if (!userInfo || !userInfo._id) return; // Don't track view if not logged in
 
-    // Prevent re-tracking if user has already viewed this session (optional but good practice)
     const hasViewed = file.views?.some((view) => view.user === userInfo._id);
-    if (hasViewed) {
-      return; // Don't send a request if already viewed
-    }
+    if (hasViewed) return;
 
     try {
       await axios.post(`${BACKEND_URL}/files/${file._id}/view`, {
         userId: userInfo._id,
       });
-      // Optimistically update the view count on the frontend
       const updatedFile = {
         ...file,
         views: [
@@ -154,13 +153,15 @@ function FileList({ libraryName, refreshTrigger, filter }) {
 
   return (
     <>
-      {selectedImage && (
-        <ImageModal
-          imageUrl={selectedImage}
-          onClose={() => setSelectedImage(null)}
+      {selectedFile && (
+        <FileDetailModal
+          file={selectedFile}
+          user={userInfo}
+          onClose={() => setSelectedFile(null)}
+          onAuthRequired={onAuthRequired}
+          onFileUpdate={handleFileUpdate}
         />
       )}
-
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {files.map((file) => (
           <div
@@ -201,10 +202,6 @@ function FileList({ libraryName, refreshTrigger, filter }) {
                   <span>{file.uploadedBy.name}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1">
-                <FaEye />
-                <span>{file.views?.length || 0}</span>
-              </div>
             </div>
 
             {isAdmin && (

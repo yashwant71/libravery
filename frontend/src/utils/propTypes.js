@@ -10,6 +10,7 @@ export const fileShape = PropTypes.shape({
   _id: PropTypes.string.isRequired,
   filename: PropTypes.string.isRequired,
   originalName: PropTypes.string,
+  description: PropTypes.string,
   mimetype: PropTypes.string,
   size: PropTypes.number,
   url: PropTypes.string.isRequired,
@@ -21,6 +22,7 @@ export const fileShape = PropTypes.shape({
   likes: PropTypes.arrayOf(actionShape),
   dislikes: PropTypes.arrayOf(actionShape),
   views: PropTypes.arrayOf(actionShape),
+  uploadedAt: PropTypes.string,
 });
 /**
  * Defines the shape of a Library object received from the backend.

@@ -20,6 +20,7 @@ const actionSchema = new mongoose.Schema(
 const fileSchema = new mongoose.Schema({
   filename: { type: String, required: true },
   originalName: { type: String },
+  description: { type: String, trim: true },
   mimetype: { type: String },
   size: { type: Number },
   url: { type: String, required: true },
@@ -34,14 +35,19 @@ const fileSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  // --- MODIFIED: Use the new actionSchema ---
   likes: [actionSchema],
   dislikes: [actionSchema],
-  views: [actionSchema], // <-- New field for views
+  views: [actionSchema],
   uploadedAt: {
     type: Date,
     default: Date.now,
   },
+  comments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+    },
+  ],
 });
 
 module.exports = mongoose.model("File", fileSchema);

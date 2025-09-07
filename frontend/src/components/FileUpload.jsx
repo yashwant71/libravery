@@ -49,7 +49,7 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
   };
 
   const handleUpload = useCallback(
-    async (fileToUpload) => {
+    async (fileToUpload, description) => {
       if (!libraryId || !user || !user._id) {
         setUploadState({
           status: "error",
@@ -65,7 +65,9 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
       formData.append("file", fileToUpload);
       formData.append("libraryId", libraryId);
       formData.append("userId", user._id);
-
+      if (description) {
+        formData.append("description", description);
+      }
       try {
         await axios.post(`${BACKEND_URL}/files/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -95,12 +97,12 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
     [libraryId, user, onFileUploaded]
   );
 
-  const handleSaveFromEditor = (dataURL) => {
+  const handleSaveFromEditor = (dataURL, description) => {
     setEditorOpen(false);
     if (editingFile) {
       const editedFile = dataURLtoFile(dataURL, editingFile.name);
       if (editedFile) {
-        handleUpload(editedFile);
+        handleUpload(editedFile, description);
       } else {
         setUploadState({
           status: "error",

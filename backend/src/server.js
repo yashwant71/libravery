@@ -6,7 +6,8 @@ const path = require("path");
 const connectDB = require("./config/db");
 const fileRoutes = require("./routes/fileRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
-const userRoutes = require("./routes/userRoutes"); // <-- Import user routes
+const userRoutes = require("./routes/userRoutes");
+const commentRoutes = require("./routes/commentRoutes");
 
 const cors = require("cors");
 
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/files", fileRoutes);
 app.use("/api/libraries", libraryRoutes);
 app.use("/api/users", userRoutes); // <-- Wire up the user routes
+app.use("/api/comments", commentRoutes);
 
 app.use(express.static("public"));
 app.get("*", (req, res) => {

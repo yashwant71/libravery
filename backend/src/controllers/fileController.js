@@ -7,7 +7,7 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
 exports.uploadFile = async (req, res) => {
   try {
-    const { libraryId, userId } = req.body;
+    const { libraryId, userId, description } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -41,6 +41,7 @@ exports.uploadFile = async (req, res) => {
     const newFile = new File({
       filename: req.file.originalname,
       originalName: req.file.originalname,
+      description: description,
       mimetype: req.file.mimetype,
       size: result.bytes,
       url: result.secure_url,
