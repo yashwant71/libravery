@@ -1,6 +1,22 @@
 // backend/src/models/File.js
 const mongoose = require("mongoose");
 
+// --- NEW: A sub-schema for tracking actions with timestamps ---
+const actionSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+); // _id: false prevents MongoDB from creating a separate ID for each action entry
+
 const fileSchema = new mongoose.Schema({
   filename: { type: String, required: true },
   originalName: { type: String },
@@ -18,18 +34,10 @@ const fileSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  likes: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
-  dislikes: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
+  // --- MODIFIED: Use the new actionSchema ---
+  likes: [actionSchema],
+  dislikes: [actionSchema],
+  views: [actionSchema], // <-- New field for views
   uploadedAt: {
     type: Date,
     default: Date.now,

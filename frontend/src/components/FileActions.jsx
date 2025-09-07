@@ -26,8 +26,10 @@ function FileActions({ file, user, onUpdate, onAuthRequired }) {
     }
   };
 
-  const userHasLiked = user && file.likes?.includes(user._id);
-  const userHasDisliked = user && file.dislikes?.includes(user._id);
+  const userHasLiked =
+    user && file.likes?.some((like) => like.user === user._id);
+  const userHasDisliked =
+    user && file.dislikes?.some((dislike) => dislike.user === user._id);
 
   const buttonVariants = {
     rest: { scale: 1 },

@@ -12,5 +12,6 @@ router.post("/upload", upload.single("file"), fileController.uploadFile);
 router.get("/", fileController.getFilesByLibrary);
 router.delete("/:id", fileController.deleteFile);
 router.put("/:fileId/like", fileController.likeFile);
+router.post("/:fileId/view", fileController.trackView);
 
 module.exports = router;

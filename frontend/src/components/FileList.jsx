@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { FaTrash, FaUserCircle } from "react-icons/fa";
+import { FaTrash, FaUserCircle, FaEye } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { fileShape } from "../utils/propTypes";
 import FileActions from "./FileActions";
@@ -47,7 +47,7 @@ ImageModal.propTypes = {
   onClose: PropTypes.func.isRequired,
 };
 
-function FileList({ libraryName, refreshTrigger }) {
+function FileList({ libraryName, refreshTrigger, filter }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -68,12 +68,12 @@ function FileList({ libraryName, refreshTrigger }) {
   };
   const fetchFiles = async () => {
     if (!libraryName) return;
-
     setLoading(true);
     setError(null);
     try {
+      // Append the sort parameter to the API request URL
       const response = await axios.get(
-        `${BACKEND_URL}/files?libraryName=${libraryName}`
+        `${BACKEND_URL}/files?libraryName=${libraryName}&sort=${filter}`
       );
       setFiles(response.data);
     } catch (err) {
@@ -106,7 +106,41 @@ function FileList({ libraryName, refreshTrigger }) {
   useEffect(() => {
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [libraryName, refreshTrigger]);
+  }, [libraryName, refreshTrigger, filter]); // Re-fetch when the filter changes
+
+  const handleTrackView = async (file) => {
+    // Only track view if a user is logged in
+    if (!userInfo || !userInfo._id) {
+      onAuthRequired();
+      return;
+    }
+
+    // Open the image modal immediately for a good UX
+    setSelectedImage(file.url);
+
+    // Prevent re-tracking if user has already viewed this session (optional but good practice)
+    const hasViewed = file.views?.some((view) => view.user === userInfo._id);
+    if (hasViewed) {
+      return; // Don't send a request if already viewed
+    }
+
+    try {
+      await axios.post(`${BACKEND_URL}/files/${file._id}/view`, {
+        userId: userInfo._id,
+      });
+      // Optimistically update the view count on the frontend
+      const updatedFile = {
+        ...file,
+        views: [
+          ...(file.views || []),
+          { user: userInfo._id, date: new Date().toISOString() },
+        ],
+      };
+      handleFileUpdate(updatedFile);
+    } catch (err) {
+      console.error("Error tracking view:", err);
+    }
+  };
 
   if (loading) return <div className="text-center py-8">Loading files...</div>;
   if (error)
@@ -133,12 +167,16 @@ function FileList({ libraryName, refreshTrigger }) {
             key={file._id}
             className="relative bg-background-primary rounded-lg border border-border flex flex-col group overflow-hidden"
           >
+            <div className="absolute top-2 left-2 z-10 bg-black bg-opacity-50 text-white text-xs font-bold flex items-center gap-1.5 py-1 px-2 rounded-full">
+              <FaEye />
+              <span>{file.views?.length || 0}</span>
+            </div>
             {file.mimetype.startsWith("image/") ? (
               <img
                 src={file.url}
                 alt={file.originalName}
                 className="h-40 w-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
-                onClick={() => setSelectedImage(file.url)}
+                onClick={() => handleTrackView(file)}
               />
             ) : (
               <div className="h-40 w-full flex items-center justify-center bg-background-muted">
@@ -163,6 +201,10 @@ function FileList({ libraryName, refreshTrigger }) {
                   <span>{file.uploadedBy.name}</span>
                 </div>
               )}
+              <div className="flex items-center gap-1">
+                <FaEye />
+                <span>{file.views?.length || 0}</span>
+              </div>
             </div>
 
             {isAdmin && (
@@ -187,6 +229,7 @@ FileList.propTypes = {
   refreshTrigger: PropTypes.number.isRequired,
   // This validates that 'files' is an array of objects matching our central 'fileShape'
   files: PropTypes.arrayOf(fileShape),
+  filter: PropTypes.string.isRequired,
 };
 
 export default FileList;

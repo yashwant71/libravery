@@ -2,11 +2,13 @@
 import { useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { FiUploadCloud } from "react-icons/fi";
+import { FiUploadCloud, FiCheckCircle, FiAlertCircle } from "react-icons/fi"; // Import new icons
 import ImageEditorModal from "./ImageEditorModal";
+import { motion } from "framer-motion"; // Import motion for animations
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+// Helper function to convert base64 to File object
 function dataURLtoFile(dataurl, filename) {
   const arr = dataurl.split(",");
   const mimeMatch = arr[0].match(/:(.*?);/);
@@ -22,9 +24,12 @@ function dataURLtoFile(dataurl, filename) {
 }
 
 function FileUpload({ libraryId, onFileUploaded, user }) {
-  const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  // --- NEW: Use a single state to manage the button's appearance and text ---
+  const [uploadState, setUploadState] = useState({
+    status: "idle",
+    message: "",
+  });
+
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [editingFile, setEditingFile] = useState(null);
 
@@ -33,10 +38,11 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
       const file = event.target.files[0];
       const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
       if (!allowedTypes.includes(file.type)) {
-        setError("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
+        setUploadState({ status: "error", message: "Invalid file type." });
+        // Reset after a delay
+        setTimeout(() => setUploadState({ status: "idle", message: "" }), 4000);
         return;
       }
-      setError("");
       setEditingFile(file);
       setEditorOpen(true);
     }
@@ -45,13 +51,15 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
   const handleUpload = useCallback(
     async (fileToUpload) => {
       if (!libraryId || !user || !user._id) {
-        setError("Cannot upload: missing user or library info.");
+        setUploadState({
+          status: "error",
+          message: "User or library missing.",
+        });
+        setTimeout(() => setUploadState({ status: "idle", message: "" }), 4000);
         return;
       }
 
-      setUploading(true);
-      setMessage("Uploading...");
-      setError("");
+      setUploadState({ status: "uploading", message: "Preparing..." });
 
       const formData = new FormData();
       formData.append("file", fileToUpload);
@@ -65,21 +73,23 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
             );
-            setMessage(`Uploading... ${percentCompleted}%`);
+            setUploadState({
+              status: "uploading",
+              message: `Uploading ${percentCompleted}%`,
+            });
           },
         });
-        setMessage("File uploaded successfully!");
+        setUploadState({ status: "success", message: "Upload Complete!" });
         if (onFileUploaded) onFileUploaded();
       } catch (err) {
         console.error("Error uploading file:", err);
-        setMessage("");
-        setError(err.response?.data?.message || "Error uploading file.");
+        setUploadState({
+          status: "error",
+          message: err.response?.data?.message || "Upload Failed",
+        });
       } finally {
-        setUploading(false);
-        setTimeout(() => {
-          setMessage("");
-          setError("");
-        }, 4000);
+        // Reset the button back to idle after 4 seconds
+        setTimeout(() => setUploadState({ status: "idle", message: "" }), 4000);
       }
     },
     [libraryId, user, onFileUploaded]
@@ -92,8 +102,55 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
       if (editedFile) {
         handleUpload(editedFile);
       } else {
-        setError("Could not process edited image.");
+        setUploadState({
+          status: "error",
+          message: "Image processing failed.",
+        });
+        setTimeout(() => setUploadState({ status: "idle", message: "" }), 4000);
       }
+    }
+  };
+
+  // --- NEW: Logic to determine button content and style based on state ---
+  const getButtonContent = () => {
+    switch (uploadState.status) {
+      case "uploading":
+        return <>{uploadState.message}</>;
+      case "success":
+        return (
+          <>
+            <FiCheckCircle /> {uploadState.message}
+          </>
+        );
+      case "error":
+        return (
+          <>
+            <FiAlertCircle /> {uploadState.message}
+          </>
+        );
+      case "idle":
+      default:
+        return (
+          <>
+            <FiUploadCloud /> Contribute Photo
+          </>
+        );
+    }
+  };
+
+  const getButtonClassName = () => {
+    const baseClasses =
+      "flex items-center justify-center gap-3 font-bold py-3 px-6 rounded cursor-pointer transition-all duration-300 w-full sm:w-auto";
+    switch (uploadState.status) {
+      case "uploading":
+        return `${baseClasses} bg-background-muted text-text-muted cursor-not-allowed`;
+      case "success":
+        return `${baseClasses} bg-secondary text-white`;
+      case "error":
+        return `${baseClasses} bg-danger text-white`;
+      case "idle":
+      default:
+        return `${baseClasses} bg-primary hover:bg-primary-hover text-white`;
     }
   };
 
@@ -107,33 +164,29 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
         />
       )}
 
-      <div className="bg-background-primary p-4 rounded-lg border border-border">
-        <div className="flex flex-col items-center justify-center w-full">
-          {/* --- THE FIX: A simple, styled button using a label --- */}
-          <label
-            htmlFor="file-upload-input"
-            className="flex items-center gap-3 bg-primary hover:bg-primary-hover text-white font-bold py-3 px-6 rounded cursor-pointer transition-colors"
-          >
-            <FiUploadCloud className="w-6 h-6" />
-            <span>Contribute a Photo</span>
-          </label>
-          <input
-            id="file-upload-input"
-            type="file"
-            className="hidden"
-            onChange={handleFileSelect}
-            accept="image/png, image/jpeg, image/jpg"
-          />
-
-          {/* --- Displaying Status Messages --- */}
-          <div className="h-6 mt-3 text-sm text-center">
-            {uploading && <p className="text-text-base">{message}</p>}
-            {error && <p className="text-danger">{error}</p>}
-            {!uploading && message && (
-              <p className="text-secondary">{message}</p>
-            )}
-          </div>
-        </div>
+      {/* The UI is now just a single, smart button positioned to the right */}
+      <div className="flex justify-end">
+        <motion.label
+          htmlFor="file-upload-input"
+          className={getButtonClassName()}
+          // Animate background color changes
+          animate={{
+            backgroundColor:
+              getButtonClassName().match(/bg-[a-z]+(?:-\d+)?/)[0],
+          }}
+          transition={{ duration: 0.3 }}
+        >
+          {getButtonContent()}
+        </motion.label>
+        <input
+          id="file-upload-input"
+          type="file"
+          className="hidden"
+          onChange={handleFileSelect}
+          accept="image/png, image/jpeg, image/jpg"
+          // Disable the input while uploading
+          disabled={uploadState.status === "uploading"}
+        />
       </div>
     </>
   );
