@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { FaTrash, FaUserCircle, FaEye } from "react-icons/fa";
+import { FaUserCircle, FaEye } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { fileShape } from "../utils/propTypes";
 import FileActions from "./FileActions";
@@ -53,14 +53,8 @@ function FileList({ libraryName, refreshTrigger, filter }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const { userInfo, onAuthRequired } = useOutletContext();
-
-  useEffect(() => {
-    // Admin check can now be based on the user object
-    setIsAdmin(userInfo?.isAdmin === true);
-  }, [userInfo]);
+  const { userInfo, onAuthRequired, library } = useOutletContext();
 
   const handleFileUpdate = (updatedFile) => {
     setFiles((currentFiles) =>
@@ -88,25 +82,6 @@ function FileList({ libraryName, refreshTrigger, filter }) {
       setError("Failed to fetch files.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (fileId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this file? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-    try {
-      await axios.delete(`${BACKEND_URL}/files/${fileId}`);
-      fetchFiles();
-    } catch (err) {
-      console.error("Error deleting file:", err);
-      alert(
-        "Failed to delete file: " + (err.response?.data?.message || err.message)
-      );
     }
   };
 
@@ -141,6 +116,12 @@ function FileList({ libraryName, refreshTrigger, filter }) {
     }
   };
 
+  const handleFileDelete = (deletedFileId) => {
+    setFiles((currentFiles) =>
+      currentFiles.filter((f) => f._id !== deletedFileId)
+    );
+  };
+
   if (loading) return <div className="text-center py-8">Loading files...</div>;
   if (error)
     return <div className="text-danger text-center py-8">Error: {error}</div>;
@@ -157,9 +138,11 @@ function FileList({ libraryName, refreshTrigger, filter }) {
         <FileDetailModal
           file={selectedFile}
           user={userInfo}
+          library={library}
           onClose={() => setSelectedFile(null)}
           onAuthRequired={onAuthRequired}
           onFileUpdate={handleFileUpdate}
+          onFileDelete={handleFileDelete}
         />
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -203,16 +186,6 @@ function FileList({ libraryName, refreshTrigger, filter }) {
                 </div>
               )}
             </div>
-
-            {isAdmin && (
-              <button
-                onClick={() => handleDelete(file._id)}
-                className="absolute top-2 right-2 bg-danger bg-opacity-70 hover:bg-opacity-100 text-white p-2 rounded-full transition-opacity opacity-0 group-hover:opacity-100"
-                title="Delete File"
-              >
-                <FaTrash className="w-4 h-4" />
-              </button>
-            )}
           </div>
         ))}
       </div>

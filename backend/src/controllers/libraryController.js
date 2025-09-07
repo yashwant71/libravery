@@ -7,12 +7,17 @@ const cloudinary = require("../config/cloudinary");
 exports.createLibrary = async (req, res) => {
   try {
     // V-- Destructure isPublic from the request body
-    const { name, description, isPublic } = req.body;
+    const { name, description, isPublic, ownerId } = req.body;
     if (!name) {
       return res.status(400).json({ message: "Library name is required" });
     }
     // V-- Pass isPublic to the new Library object
-    const newLibrary = new Library({ name, description, isPublic });
+    const newLibrary = new Library({
+      name,
+      description,
+      isPublic,
+      owner: ownerId,
+    });
     await newLibrary.save();
     res.status(201).json(newLibrary);
   } catch (error) {
@@ -98,10 +103,9 @@ exports.getLibraryById = async (req, res) => {
 exports.getLibraryByName = async (req, res) => {
   try {
     const { name } = req.params;
-    // Use a case-insensitive regex to find the library
     const library = await Library.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
-    });
+    }).populate("owner", "name"); // <-- Populate the owner's name
 
     if (!library) {
       return res.status(404).json({ message: "Library not found" });

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
+import { USER_LOCAL_STORAGE_KEY } from "../constants/admin";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -19,11 +20,20 @@ function CreateLibrary({ onLibraryCreated, onClose }) {
       return;
     }
 
+    // --- Get the logged-in user's data from localStorage ---
+    const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
+    if (!storedUser) {
+      setError("You must be logged in to create a library.");
+      return;
+    }
+    const ownerId = JSON.parse(storedUser)._id;
+
     try {
       await axios.post(`${BACKEND_URL}/libraries`, {
         name,
         description,
         isPublic,
+        ownerId,
       });
       onLibraryCreated();
       onClose();

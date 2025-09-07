@@ -33,5 +33,9 @@ export const libraryShape = PropTypes.shape({
   name: PropTypes.string.isRequired,
   description: PropTypes.string,
   isPublic: PropTypes.bool.isRequired,
+  owner: PropTypes.shape({
+    _id: PropTypes.string,
+    name: PropTypes.string,
+  }),
   createdAt: PropTypes.string, // Dates are often serialized as strings
 });

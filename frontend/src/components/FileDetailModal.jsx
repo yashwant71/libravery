@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 import { IoClose } from "react-icons/io5";
-import { FaPaperPlane } from "react-icons/fa";
-import { fileShape } from "../utils/propTypes";
+import { FaPaperPlane, FaTrash } from "react-icons/fa";
+import { fileShape, libraryShape } from "../utils/propTypes";
 import FileActions from "./FileActions";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -12,9 +12,11 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 function FileDetailModal({
   file,
   user,
+  library,
   onClose,
   onAuthRequired,
   onFileUpdate,
+  onFileDelete,
 }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -57,11 +59,30 @@ function FileDetailModal({
     }
   };
 
+  const handleDelete = async () => {
+    if (
+      window.confirm("Are you sure you want to permanently delete this file?")
+    ) {
+      try {
+        await axios.delete(`${BACKEND_URL}/files/${file._id}`);
+        onFileDelete(file._id); // Notify parent to remove file from state
+        onClose(); // Close the modal
+      } catch (err) {
+        console.error("Error deleting file:", err);
+        alert("Failed to delete file.");
+      }
+    }
+  };
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // --- Permission Logic ---
+  const isUploader = user?._id === file.uploadedBy?._id;
+  const isAdmin = user?.isAdmin === true;
+  const isLibraryOwner = user?._id === library?.owner?._id;
+  const canDelete = isUploader || isAdmin || isLibraryOwner;
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center p-4"
@@ -71,7 +92,7 @@ function FileDetailModal({
         className="bg-background-primary rounded-lg flex flex-col w-full h-full max-w-4xl max-h-[95vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
               {file.uploadedBy?.name
@@ -79,20 +100,31 @@ function FileDetailModal({
                 : "?"}
             </div>
             <div>
-              <p className="font-bold text-text-base">
+              <p className="font-bold text-text-base leading-tight">
                 {file.uploadedBy?.name || "Anonymous"}
               </p>
-              <p className="text-xs text-text-muted">
+              <p className="text-xs text-text-muted leading-tight">
                 Uploaded on {formatDate(file.uploadedAt)}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-text-muted hover:text-text-base"
-          >
-            <IoClose size={24} />
-          </button>
+          <div className="flex items-center gap-4">
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                className="p-2 text-danger hover:text-danger-hover transition-colors"
+                title="Delete File"
+              >
+                <FaTrash size={18} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-text-muted hover:text-text-base"
+            >
+              <IoClose size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-grow overflow-y-auto">
@@ -105,6 +137,7 @@ function FileDetailModal({
           </div>
 
           <div className="p-4">
+            <h3 className="font-bold mb-2">{file.originalName}</h3>
             {file.description && (
               <p className="text-sm text-text-muted mb-4">{file.description}</p>
             )}
@@ -195,10 +228,12 @@ function FileDetailModal({
 
 FileDetailModal.propTypes = {
   file: fileShape.isRequired,
-  user: PropTypes.shape({ _id: PropTypes.string }),
+  user: PropTypes.shape({ _id: PropTypes.string, isAdmin: PropTypes.bool }),
+  library: libraryShape,
   onClose: PropTypes.func.isRequired,
   onAuthRequired: PropTypes.func.isRequired,
   onFileUpdate: PropTypes.func.isRequired,
+  onFileDelete: PropTypes.func.isRequired,
 };
 
 export default FileDetailModal;
