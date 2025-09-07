@@ -18,6 +18,8 @@ export const fileShape = PropTypes.shape({
     _id: PropTypes.string, // The ID will be populated too
     name: PropTypes.string,
   }),
+  likes: PropTypes.arrayOf(PropTypes.string), // Array of user IDs
+  dislikes: PropTypes.arrayOf(PropTypes.string),
 });
 
 /**

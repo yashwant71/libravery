@@ -2,13 +2,11 @@
 import { useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { useDropzone } from "react-dropzone";
 import { FiUploadCloud } from "react-icons/fi";
 import ImageEditorModal from "./ImageEditorModal";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-// Helper function to convert the editor's base64 output back to a File
 function dataURLtoFile(dataurl, filename) {
   const arr = dataurl.split(",");
   const mimeMatch = arr[0].match(/:(.*?);/);
@@ -27,10 +25,22 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  // State to manage the editor modal
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [editingFile, setEditingFile] = useState(null);
+
+  const handleFileSelect = (event) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(file.type)) {
+        setError("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
+        return;
+      }
+      setError("");
+      setEditingFile(file);
+      setEditorOpen(true);
+    }
+  };
 
   const handleUpload = useCallback(
     async (fileToUpload) => {
@@ -75,27 +85,6 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
     [libraryId, user, onFileUploaded]
   );
 
-  const onDrop = useCallback((acceptedFiles, fileRejections) => {
-    if (fileRejections.length > 0) {
-      setError("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
-      return;
-    }
-    setError("");
-    const file = acceptedFiles[0];
-    if (file) {
-      // Instead of uploading, open the editor
-      setEditingFile(file);
-      setEditorOpen(true);
-    }
-  }, []); // onDrop is now simpler and has no external dependencies
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { "image/jpeg": [".jpeg", ".jpg"], "image/png": [".png"] },
-    multiple: false,
-  });
-
-  // Function to handle the save event from the editor modal
   const handleSaveFromEditor = (dataURL) => {
     setEditorOpen(false);
     if (editingFile) {
@@ -119,52 +108,32 @@ function FileUpload({ libraryId, onFileUploaded, user }) {
       )}
 
       <div className="bg-background-primary p-4 rounded-lg border border-border">
-        <div
-          {...getRootProps()}
-          className={`relative cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-border-accent border-dashed rounded-lg bg-background-secondary transition-colors ${
-            isDragActive
-              ? "border-primary bg-background-muted"
-              : "hover:bg-background-muted"
-          }`}
-        >
-          <input {...getInputProps()} />
+        <div className="flex flex-col items-center justify-center w-full">
+          {/* --- THE FIX: A simple, styled button using a label --- */}
+          <label
+            htmlFor="file-upload-input"
+            className="flex items-center gap-3 bg-primary hover:bg-primary-hover text-white font-bold py-3 px-6 rounded cursor-pointer transition-colors"
+          >
+            <FiUploadCloud className="w-6 h-6" />
+            <span>Contribute a Photo</span>
+          </label>
+          <input
+            id="file-upload-input"
+            type="file"
+            className="hidden"
+            onChange={handleFileSelect}
+            accept="image/png, image/jpeg, image/jpg"
+          />
 
-          <div className="text-center pointer-events-none">
-            <FiUploadCloud
-              className={`w-10 h-10 mb-3 mx-auto transition-colors ${
-                isDragActive ? "text-primary" : "text-text-muted"
-              }`}
-            />
-            {uploading ? (
-              <p className="text-text-base">{message}</p>
-            ) : isDragActive ? (
-              <p className="font-semibold text-primary">
-                Drop the file here...
-              </p>
-            ) : (
-              <>
-                <p className="mb-2 text-sm text-text-muted">
-                  <span className="font-semibold text-text-base">
-                    Click to Contribute
-                  </span>{" "}
-                  or drag & drop
-                </p>
-                <p className="text-xs text-text-muted">
-                  PNG, JPG, or JPEG only
-                </p>
-              </>
+          {/* --- Displaying Status Messages --- */}
+          <div className="h-6 mt-3 text-sm text-center">
+            {uploading && <p className="text-text-base">{message}</p>}
+            {error && <p className="text-danger">{error}</p>}
+            {!uploading && message && (
+              <p className="text-secondary">{message}</p>
             )}
           </div>
         </div>
-
-        {error && (
-          <p className="text-danger mt-3 text-sm text-center w-full">{error}</p>
-        )}
-        {!uploading && message && (
-          <p className="text-secondary mt-3 text-sm text-center w-full">
-            {message}
-          </p>
-        )}
       </div>
     </>
   );

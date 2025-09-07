@@ -114,3 +114,68 @@ exports.deleteFile = async (req, res) => {
       .json({ message: "Server error during deletion", error: error.message });
   }
 };
+
+exports.likeFile = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { userId, action } = req.body; // action can be 'like' or 'dislike'
+
+    if (!userId || !action) {
+      return res
+        .status(400)
+        .json({ message: "User ID and action are required." });
+    }
+
+    const file = await File.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found." });
+    }
+
+    const likes = file.likes.map((id) => id.toString());
+    const dislikes = file.dislikes.map((id) => id.toString());
+
+    const hasLiked = likes.includes(userId);
+    const hasDisliked = dislikes.includes(userId);
+
+    if (action === "like") {
+      // If user has already liked, remove the like (toggle off)
+      if (hasLiked) {
+        file.likes.pull(userId);
+      } else {
+        // If not liked, add the like
+        file.likes.push(userId);
+        // If they had previously disliked it, remove the dislike
+        if (hasDisliked) {
+          file.dislikes.pull(userId);
+        }
+      }
+    } else if (action === "dislike") {
+      // If user has already disliked, remove the dislike (toggle off)
+      if (hasDisliked) {
+        file.dislikes.pull(userId);
+      } else {
+        // If not disliked, add the dislike
+        file.dislikes.push(userId);
+        // If they had previously liked it, remove the like
+        if (hasLiked) {
+          file.likes.pull(userId);
+        }
+      }
+    } else {
+      return res.status(400).json({ message: "Invalid action." });
+    }
+
+    await file.save();
+
+    // Populate the user data to send back the full, updated file object
+    const updatedFile = await File.findById(fileId).populate(
+      "uploadedBy",
+      "name"
+    );
+    res.status(200).json(updatedFile);
+  } catch (error) {
+    console.error("Error liking file:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

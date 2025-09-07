@@ -1,14 +1,12 @@
 // frontend/src/components/FileList.jsx
 import { useState, useEffect } from "react";
-import PropTypes from "prop-types"; // <-- Import PropTypes
+import { useOutletContext } from "react-router-dom";
+import PropTypes from "prop-types";
 import axios from "axios";
 import { FaTrash, FaUserCircle } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
-// --- Import our new admin constants ---
-import { USER_LOCAL_STORAGE_KEY } from "../constants/admin";
-// --- Import our centralized file shape definition ---
 import { fileShape } from "../utils/propTypes";
-
+import FileActions from "./FileActions";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // This sub-component does not need changes, but it's good practice to define its props.
@@ -55,17 +53,19 @@ function FileList({ libraryName, refreshTrigger }) {
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const { userInfo, onAuthRequired } = useOutletContext();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem(USER_LOCAL_STORAGE_KEY);
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      if (userData.isAdmin) {
-        setIsAdmin(true);
-      }
-    }
-  }, []); // Run once on component mount
-
+    // Admin check can now be based on the user object
+    setIsAdmin(userInfo?.isAdmin === true);
+  }, [userInfo]);
+  const handleFileUpdate = (updatedFile) => {
+    setFiles((currentFiles) =>
+      currentFiles.map((file) =>
+        file._id === updatedFile._id ? updatedFile : file
+      )
+    );
+  };
   const fetchFiles = async () => {
     if (!libraryName) return;
 
@@ -131,7 +131,7 @@ function FileList({ libraryName, refreshTrigger }) {
         {files.map((file) => (
           <div
             key={file._id}
-            className="relative bg-background-primary rounded-lg border border-border flex flex-col items-center text-center group overflow-hidden"
+            className="relative bg-background-primary rounded-lg border border-border flex flex-col group overflow-hidden"
           >
             {file.mimetype.startsWith("image/") ? (
               <img
@@ -145,11 +145,19 @@ function FileList({ libraryName, refreshTrigger }) {
                 <span className="text-6xl text-text-muted">📄</span>
               </div>
             )}
-            <div className="p-2 w-full">
+            <FileActions
+              file={file}
+              user={userInfo}
+              onUpdate={handleFileUpdate}
+              onAuthRequired={onAuthRequired}
+            />
+            <div className="p-2 w-full text-center">
+              {/* --- Integrate the FileActions component here --- */}
+
               {/* <p className="text-sm font-semibold text-text-base truncate">
                 {file.originalName}
               </p> */}
-              {file.uploadedBy && file.uploadedBy.name && (
+              {file.uploadedBy?.name && (
                 <div className="flex items-center justify-center gap-1 mt-1 text-xs text-text-muted">
                   <FaUserCircle />
                   <span>{file.uploadedBy.name}</span>

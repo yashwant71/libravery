@@ -2,24 +2,38 @@
 const mongoose = require("mongoose");
 
 const fileSchema = new mongoose.Schema({
-  filename: { type: String, required: true }, // Name from Cloudinary
-  originalName: { type: String }, // Original name from user's computer
+  filename: { type: String, required: true },
+  originalName: { type: String },
   mimetype: { type: String },
-  size: { type: Number }, // Size in bytes
-  url: { type: String, required: true }, // Cloudinary URL
-  public_id: { type: String, required: true }, // Cloudinary public ID for deletion
+  size: { type: Number },
+  url: { type: String, required: true },
+  public_id: { type: String, required: true },
   library: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Library", // Reference to the Library model
+    ref: "Library",
     required: true,
   },
-  // --- MODIFIED: Store the User's ObjectId instead of their name ---
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // This creates a reference to the User model
+    ref: "User",
     required: true,
   },
-  uploadedAt: { type: Date, default: Date.now },
+  likes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  dislikes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 module.exports = mongoose.model("File", fileSchema);
